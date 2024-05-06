@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Weather Information</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 20px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            }
+    
+            .header {
+                text-align: center;
+            }
+    
+            .content {
+                display: flex;
+                flex-direction: row;
+                justify-content: space-between;
+                width: 100%;
+            }
+    
+            .left-side {
+                width: 45%;
+            }
+    
+            .weather-box {
+                border: 1px solid #ccc;
+                padding: 20px;
+                border-radius: 5px;
+                margin-bottom: 20px;
+            }
+    
+            #chart-container {
+                width: 45%;
+                height: 80vh;
+            }
+    
+            .temperature {
+                font-size: 36px;
+                font-weight: bold;
+                color: #007BFF;
+            }
+    
+            @media screen and (max-width: 959px) {
+                .iframe-container {
+                    display: none;
+                }
+                .warning-message {
+                    display: block;
+                    text-align: center;
+                    padding: 20px;
+                    font-size: 18px;
+                    color: red;
+                }
+                .content {
+                    flex-direction: column;
+                    align-items: center;
+                }
+                .left-side, #chart-container {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>Weather Dashboard</h1>
+            <p>This is a comparison weather dashboard that displays the current weather in the room and weather forecast for a given location.</p>
+        </div>
+        <div class="content">
+            <div class="left-side">
+                <div class="weather-box" id="current_weather_box">
+                    <h2>Current Location</h2>
+                    <button onclick="getWeatherByLocation()">Get Weather</button>
+                    <div id="current_weather_info">
+                        <!-- Weather info for the current location will be displayed here -->
+                    </div>
+                </div>
+                <div class="weather-box" id="city_weather_box">
+                    <h2>Search by City</h2>
+                    <input type="text" id="city_name" placeholder="Enter city name">
+                    <button onclick="getWeatherByCity()">Check Weather</button>
+                    <div id="city_weather_info">
+                        <!-- Weather info for the searched city will be displayed here -->
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="iframe-container">
+                    <iframe src="https://app.arduino.cc/dashboards/e8bf8c69-7dce-4314-9e2e-95ac37e83d91" width="960" height="960" style="border:none;"></iframe>
+                </div>
+                <div class="warning-message" style="display:none;">
+                    Please use a screen width of at least 960px to view the dashboard.
+                </div>
+            </div>
+        </div>
+        <script>
+            function getWeatherByLocation() {
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(showWeather);
+                } else {
+                    alert("Geolocation is not supported by this browser.");
+                }
+            }
+        
+            function showWeather(position) {
+                var latitude = position.coords.latitude;
+                var longitude = position.coords.longitude;
+                fetch(`/weather?lat=${latitude}&lon=${longitude}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayWeather(data, 'current');
+                    });
+            }
+        
+            function getWeatherByCity() {
+                var cityName = document.getElementById('city_name').value;
+                fetch(`/weather?city=${cityName}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            alert(data.error);
+                            return;
+                        }
+                        displayWeather(data, 'city');
+                    });
+            }
+        
+            function displayWeather(data, type) {
+        var weatherInfo = `
+                <p class="temperature">${(data.temperature - 273.15).toFixed(2)} °C</p>
+                <p>Humidity: ${data.humidity}%</p>
+                <p>Pressure: ${data.pressure} hPa</p>
+                <p>Description: ${data.description}</p>
+            `;
+        var airQualityInfo = "";
+        if (data.us_aqi && data.us_aqi.length > 0) {
+            var latestAQI = data.us_aqi[data.us_aqi.length - 1]; // Get the latest AQI value
+            airQualityInfo = `
+                <p>Latest US AQI: ${latestAQI}</p>
+            `;
+        }
+        if (type === 'current') {
+            document.getElementById('current_weather_info').innerHTML = weatherInfo + airQualityInfo;
+        } else {
+            document.getElementById('city_weather_info').innerHTML = `<h3>${document.getElementById('city_name').value}</h3>` + weatherInfo + airQualityInfo;
+        }
+    }
+        </script>
+</body>
+</html>
